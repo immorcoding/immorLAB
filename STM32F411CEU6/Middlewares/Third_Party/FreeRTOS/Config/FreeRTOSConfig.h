@@ -35,6 +35,7 @@ void lab_assert(const char *file, int line);
 #define configGENERATE_RUN_TIME_STATS            0
 
 #define INCLUDE_vTaskDelay                       1
+#define INCLUDE_vTaskSuspend                     1
 #define INCLUDE_xTaskGetSchedulerState           1
 
 /* Four implemented priority bits; all four are preemption priority bits. */
