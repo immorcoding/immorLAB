@@ -6,9 +6,15 @@
 volatile uint32_t led_count;
 volatile uint32_t heartbeat_count;
 volatile uint32_t irq_count;
-volatile TraceEntry trace[16];
+volatile TraceEntry trace[32];
 volatile uint32_t trace_count;
 volatile uint32_t trace_overflow;
+volatile uint32_t count;
+volatile uint32_t updates;
+volatile uint32_t task_temp;
+volatile uint32_t irq_temp;
+volatile uint32_t experiment_done;
+volatile CaseResult results[2];
 
 static TaskHandle_t led_task;
 
@@ -48,18 +54,66 @@ static void LedTask(void *argument)
     }
 }
 
+static void RunCase(uint32_t protected)
+{
+    uint32_t previous_irqs = irq_count;
+
+    count = 0U;
+    updates = 0U;
+    task_temp = 0U;
+    irq_temp = 0U;
+    record(CASE_BEGIN, protected);
+
+    if (protected != 0U)
+    {
+        taskENTER_CRITICAL();
+    }
+
+    /* Deliberately split the operation; not a claim about count++ assembly. */
+    task_temp = count;
+    record(TASK_READ, task_temp);
+    NVIC_SetPendingIRQ(EXTI0_IRQn);
+    __DSB();
+    __ISB();
+
+    if (protected == 0U)
+    {
+        /* Reject a run if the intended injection point was not observed. */
+        configASSERT(irq_count == previous_irqs + 1U);
+    }
+    else
+    {
+        configASSERT(irq_count == previous_irqs);
+    }
+
+    task_temp = task_temp + 1U;
+    count = task_temp;
+    ++updates;
+    record(TASK_WRITE, count);
+
+    if (protected != 0U)
+    {
+        taskEXIT_CRITICAL();
+        __DSB();
+        __ISB();
+    }
+
+    configASSERT(irq_count == previous_irqs + 1U);
+    results[protected].count = count;
+    results[protected].updates = updates;
+    results[protected].task_temp = task_temp;
+    results[protected].irq_temp = irq_temp;
+    record(CASE_DONE, count);
+}
+
 static void HeartbeatTask(void *argument)
 {
     (void)argument;
 
     vTaskDelay(pdMS_TO_TICKS(1000U));
-    record(TASK_BEFORE, 0U);
-
-    /* Software-pended IRQ: no GPIO edge or EXTI peripheral trigger. */
-    NVIC_SetPendingIRQ(EXTI0_IRQn);
-    __DSB();
-    __ISB();
-    record(TASK_AFTER, 0U);
+    RunCase(0U);
+    RunCase(1U);
+    experiment_done = 1U;
 
     for (;;)
     {
@@ -74,6 +128,11 @@ void EXTI0_IRQHandler(void)
 
     ++irq_count;
     record(IRQ_ENTER, irq_count);
+    irq_temp = count;
+    irq_temp = irq_temp + 1U;
+    count = irq_temp;
+    ++updates;
+    record(IRQ_WRITE, count);
     vTaskNotifyGiveFromISR(led_task, &woken);
     record(IRQ_NOTIFY, (uint32_t)woken);
     record(IRQ_EXIT, 0U);

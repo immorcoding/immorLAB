@@ -15,7 +15,12 @@ enum
     IRQ_NOTIFY,
     IRQ_EXIT,
     LED_WAKE,
-    TASK_AFTER
+    TASK_AFTER,
+    CASE_BEGIN,
+    TASK_READ,
+    TASK_WRITE,
+    IRQ_WRITE,
+    CASE_DONE
 };
 
 typedef struct
@@ -25,9 +30,24 @@ typedef struct
     uint32_t value;
 } TraceEntry;
 
-extern volatile TraceEntry trace[16];
+extern volatile TraceEntry trace[32];
 extern volatile uint32_t trace_count;
 extern volatile uint32_t trace_overflow;
+
+typedef struct
+{
+    uint32_t count;
+    uint32_t updates;
+    uint32_t task_temp;
+    uint32_t irq_temp;
+} CaseResult;
+
+extern volatile uint32_t count;
+extern volatile uint32_t updates;
+extern volatile uint32_t task_temp;
+extern volatile uint32_t irq_temp;
+extern volatile uint32_t experiment_done;
+extern volatile CaseResult results[2];
 
 void app_start(void);
 
