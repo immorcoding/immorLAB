@@ -1,7 +1,8 @@
 # immorLAB
 
 Small STM32/FreeRTOS learning experiments. The shared F411 baseline is
-identified by the Git tag `f411-baseline-v1`.
+identified by the Git tag `f411-baseline-v2` (`v1` plus a J-Link debug
+configuration; `v1` stays fixed for older experiments).
 
 ## Layout
 
@@ -35,7 +36,7 @@ it is not a periodic blink program.
 Run from the Git repository root; replace the sample branch name as needed:
 
 ```powershell
-git switch -c codex/lost-update f411-baseline-v1
+git switch -c codex/lost-update f411-baseline-v2
 ```
 
 Each experiment starts from the fixed baseline tag and keeps its own code,
